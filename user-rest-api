@@ -1,0 +1,42 @@
+import pandas as pd
+import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from flask import Flask, request, jsonify
+
+# Load the saved model
+vectorizer, similarity_matrix, df_users = joblib.load("user_follow_recommendation_model.pkl")
+
+# Flask API
+app = Flask(__name__)
+
+def recommend_users(user_guid, top_n=5):
+    if user_guid not in df_users['guid'].values:
+        return f"User {user_guid} not found in the dataset."
+
+    # Get index of the user
+    user_idx = df_users[df_users['guid'] == user_guid].index[0]
+
+    # Get similarity scores for this user
+    sim_scores = list(enumerate(similarity_matrix[user_idx]))
+
+    # Sort users by similarity score (excluding the user itself)
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:]
+
+    # Get top N similar users
+    top_users = [df_users.iloc[i[0]]['guid'] for i in sim_scores[:top_n]]
+    return top_users
+
+@app.route('/recommend_users', methods=['GET'])
+def recommend_users_api():
+    user_guid = request.args.get('user_guid')
+    top_n = request.args.get('top_n', default=5, type=int)
+    
+    if not user_guid:
+        return jsonify({"error": "User GUID is required"}), 400
+    
+    recommended_users = recommend_users(user_guid, top_n)
+    return jsonify({"user_guid": user_guid, "recommended_users": recommended_users})
+
+if __name__ == '__main__':
+    app.run(debug=True)
