@@ -1,0 +1,35 @@
+import json
+import random
+
+# Load sample user data (Modify the file name as needed)
+with open("sample_users.json", "r") as file:
+    users = json.load(file)
+
+# Load real GUIDs from a file or list
+real_guids = [
+    "PSI98765432", "PSI87654321", "PSI76543210", "PSI65432109", "PSI54321098"
+]
+real_gpns = [
+    "98765432", "87654321", "76543210", "65432109", "54321098"
+]
+
+# Ensure we have enough real GUIDs to replace all sample ones
+if len(real_guids) < len(users):
+    raise ValueError("Not enough real GUIDs to replace all sample ones.")
+
+# Shuffle the real GUIDs and GPNs to assign randomly
+random.shuffle(real_guids)
+random.shuffle(real_gpns)
+
+# Replace sample GUIDs and GPNs with real ones
+for i, user in enumerate(users):
+    if "guid" in user:
+        user["guid"] = real_guids[i % len(real_guids)]
+    if "gpn" in user:
+        user["gpn"] = real_gpns[i % len(real_gpns)]
+
+# Save the updated data
+with open("updated_users.json", "w") as file:
+    json.dump(users, file, indent=4)
+
+print("User GUIDs and GPNs have been replaced successfully!")
