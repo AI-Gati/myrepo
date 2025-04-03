@@ -1,0 +1,42 @@
+import pandas as pd
+import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Load the user dataset
+df_users = pd.read_csv("sample_users_with_tags.csv")
+
+# Create a text-based profile for each user by combining relevant fields
+df_users['profile_text'] = df_users.apply(lambda row: ' '.join(row['likedTags']), axis=1)
+
+# Convert text profiles to numerical vectors
+vectorizer = TfidfVectorizer()
+profile_matrix = vectorizer.fit_transform(df_users['profile_text'])
+
+# Compute similarity scores between users
+similarity_matrix = cosine_similarity(profile_matrix)
+
+# Save the model
+joblib.dump((vectorizer, similarity_matrix, df_users), "user_follow_recommendation_model.pkl")
+print("Model saved successfully!")
+
+def recommend_users(user_guid, top_n=5):
+    if user_guid not in df_users['guid'].values:
+        return f"User {user_guid} not found in the dataset."
+
+    # Get index of the user
+    user_idx = df_users[df_users['guid'] == user_guid].index[0]
+
+    # Get similarity scores for this user
+    sim_scores = list(enumerate(similarity_matrix[user_idx]))
+
+    # Sort users by similarity score (excluding the user itself)
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)[1:]
+
+    # Get top N similar users
+    top_users = [df_users.iloc[i[0]]['guid'] for i in sim_scores[:top_n]]
+    return top_users
+
+# Example usage
+sample_user = df_users.iloc[0]['guid']
+print(f"Recommended users to follow for {sample_user}: {recommend_users(sample_user)}")
